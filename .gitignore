@@ -30,14 +30,14 @@ DerivedData
 *.ipa
 *.xcuserstate
 project.xcworkspace
-      
+
 
 # Android/IntelliJ
 android/.classpath
 android/.project
 android/.settings
 #
-build/
+android/build/
 .idea
 .gradle
 local.properties
@@ -47,4 +47,3 @@ local.properties
 buck-out/
 \.buckd/
 *.keystore
-      
