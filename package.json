@@ -1,7 +1,7 @@
 {
   "name": "react-native-usb-serialport",
-  "version": "1.3.0",
-  "description": "This library is for usb serial port communication on android platforms",
+  "version": "2.0.0",
+  "description": "This library is for multi usb serial port communication on android platforms",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,7 +9,8 @@
   "keywords": [
     "react-native-usb-serialport",
     "android serialport",
-    "react native usb serialport communication"
+    "react native usb serialport communication",
+    "multi usb serial port"
   ],
   "author": "Melih YARIKKAYA, Li Zheng",
   "license": "MIT",
