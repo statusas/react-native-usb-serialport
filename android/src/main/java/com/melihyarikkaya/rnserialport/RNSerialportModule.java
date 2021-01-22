@@ -370,7 +370,11 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         return;
       }
 
-      requestUserPermission(device);
+      if (usbManager.hasPermission(device)) {
+        startConnection(device, true);
+      } else {
+        requestUserPermission(device);
+      }
 
     } catch (Exception err) {
       eventEmit(onErrorEvent, createError(deviceName, Definitions.ERROR_CONNECTION_FAILED, Definitions.ERROR_CONNECTION_FAILED_MESSAGE + " Catch Error Message:" + err.getMessage()));
