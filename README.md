@@ -7,10 +7,10 @@ Add multi usb serial port connections support after forked from [react-native-se
 
 ```javascript
 -  $ npm install --save react-native-serialport
--  $ npm install --save react-native-usb-serialport
++  $ npm install --save react-native-usb-serialport
 
 -  import { RNSerialport, definitions, actions } from "react-native-serialport";
--  import { RNSerialport, definitions, actions } from "react-native-usb-serialport";
++  import { RNSerialport, definitions, actions } from "react-native-usb-serialport";
 
 -  RNSerialport.disconnect();
 +  RNSerialport.disconnectDevice('/dev/bus/usb/001/007');
