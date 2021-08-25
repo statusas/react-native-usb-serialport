@@ -1,4 +1,4 @@
-package com.asterinet.react.tcpsocket;
+package com.melihyarikkaya.rnserialport;
 
 import android.content.Context;
 import android.net.Network;

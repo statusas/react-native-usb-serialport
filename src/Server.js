@@ -2,7 +2,7 @@
 
 import { NativeModules } from 'react-native';
 import EventEmitter from 'eventemitter3';
-const Sockets = NativeModules.TcpSockets;
+const Sockets = NativeModules.RNSerialport;
 import Socket from './Socket';
 import { nativeEventEmitter, getNextId } from './Globals';
 

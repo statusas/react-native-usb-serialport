@@ -1,5 +1,5 @@
 import { NativeEventEmitter, NativeModules } from 'react-native';
-const Sockets = NativeModules.TcpSockets;
+const Sockets = NativeModules.RNSerialport;
 
 let instanceNumber = 0;
 

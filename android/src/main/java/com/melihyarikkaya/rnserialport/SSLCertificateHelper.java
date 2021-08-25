@@ -1,4 +1,4 @@
-package com.asterinet.react.tcpsocket;
+package com.melihyarikkaya.rnserialport;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

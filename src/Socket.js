@@ -3,7 +3,7 @@
 import { NativeModules, Image } from 'react-native';
 import EventEmitter from 'eventemitter3';
 import { Buffer } from 'buffer';
-const Sockets = NativeModules.TcpSockets;
+const Sockets = NativeModules.RNSerialport;
 import { nativeEventEmitter, getNextId } from './Globals';
 
 const STATE = {

@@ -15,17 +15,40 @@ import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.bridge.WritableNativeArray;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.net.Network;
 import android.util.Base64;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.io.IOException;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.primitives.UnsignedBytes;
 
@@ -36,8 +59,8 @@ import android.hardware.usb.UsbManager;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
-public class RNSerialportModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
-    private static final String TAG = "TcpSockets";
+public class RNSerialportModule extends ReactContextBaseJavaModule implements LifecycleEventListener, TcpReceiverTask.OnDataReceivedListener {
+    private static final String TAG = "RNSerialport";
     private static final int N_THREADS = 2;
     private final ReactApplicationContext mReactContext;
     private final ConcurrentHashMap<Integer, TcpSocket> socketMap = new ConcurrentHashMap<>();
@@ -45,16 +68,15 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     private final CurrentNetwork currentNetwork = new CurrentNetwork();
     private final ExecutorService executorService = Executors.newFixedThreadPool(N_THREADS);
 
-  private final ReactApplicationContext reactContext;
   public RNSerialportModule(ReactApplicationContext reactContext) {
     super(reactContext);
-    this.reactContext = reactContext;
+    mReactContext = reactContext;
     fillDriverList();
   }
 
   @Override
   public String getName() {
-    return "RNSerialport";
+    return TAG;
   }
 
   private final String ACTION_USB_READY = "com.felhr.connectivityservices.USB_READY";
@@ -154,8 +176,8 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
 
   private void eventEmit(String eventName, Object data) {
     try {
-      if(reactContext.hasActiveCatalystInstance()) {
-        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(eventName, data);
+      if(mReactContext.hasActiveCatalystInstance()) {
+        mReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(eventName, data);
       }
     }
     catch (Exception error) {}
@@ -191,7 +213,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     filter.addAction(ACTION_USB_PERMISSION);
     filter.addAction(ACTION_USB_ATTACHED);
     filter.addAction(ACTION_USB_DETACHED);
-    reactContext.registerReceiver(mUsbReceiver, filter);
+    mReactContext.registerReceiver(mUsbReceiver, filter);
   }
 
   private void fillDriverList() {
@@ -267,7 +289,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
     setFilters();
 
-    usbManager = (UsbManager) reactContext.getSystemService(Context.USB_SERVICE);
+    usbManager = (UsbManager) mReactContext.getSystemService(Context.USB_SERVICE);
 
     usbServiceStarted = true;
 
@@ -290,7 +312,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     if(!usbServiceStarted) {
       return;
     }
-    reactContext.unregisterReceiver(mUsbReceiver);
+    mReactContext.unregisterReceiver(mUsbReceiver);
     usbServiceStarted = false;
     eventEmit(onServiceStopped, null);
   }
@@ -318,7 +340,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
       return;
     }
 
-    UsbManager manager = (UsbManager) reactContext.getSystemService(Context.USB_SERVICE);
+    UsbManager manager = (UsbManager) mReactContext.getSystemService(Context.USB_SERVICE);
 
     HashMap<String, UsbDevice> devices = manager.getDeviceList();
 
@@ -411,7 +433,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
 
     // Intent intent = new Intent(ACTION_USB_DETACHED);
-    // reactContext.sendBroadcast(intent);
+    // mReactContext.sendBroadcast(intent);
 
     // above will cause
     // `Permission Denial: not allowed to send broadcast android.hardware.usb.action.USB_DEVICE_DETACHED from pid=6037, uid=10068`
@@ -602,13 +624,13 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         if(serialPort == null) {
           // No driver for given device
           Intent intent = new Intent(ACTION_USB_NOT_SUPPORTED);
-          reactContext.sendBroadcast(intent);
+          mReactContext.sendBroadcast(intent);
           return;
         }
 
         if(!serialPort.open()){
           Intent intent = new Intent(ACTION_USB_NOT_OPENED);
-          reactContext.sendBroadcast(intent);
+          mReactContext.sendBroadcast(intent);
           return;
         }
 
@@ -658,10 +680,10 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         serialPort.read(usbReadCallback);
 
         Intent intent = new Intent(ACTION_USB_READY);
-        reactContext.sendBroadcast(intent);
+        mReactContext.sendBroadcast(intent);
         intent = new Intent(ACTION_USB_CONNECT);
         intent.putExtra(EXTRA_USB_DEVICE_NAME, device.getDeviceName());
-        reactContext.sendBroadcast(intent);
+        mReactContext.sendBroadcast(intent);
       } catch (Exception error) {
         WritableMap map = createError(Definitions.ERROR_CONNECTION_FAILED, Definitions.ERROR_CONNECTION_FAILED_MESSAGE);
         map.putString("exceptionErrorMessage", error.getMessage());
@@ -673,19 +695,19 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
   private void requestUserPermission(UsbDevice device) {
     if(device == null)
       return;
-    PendingIntent mPendingIntent = PendingIntent.getBroadcast(reactContext, 0 , new Intent(ACTION_USB_PERMISSION), 0);
+    PendingIntent mPendingIntent = PendingIntent.getBroadcast(mReactContext, 0 , new Intent(ACTION_USB_PERMISSION), 0);
     usbManager.requestPermission(device, mPendingIntent);
   }
 
   private void startConnection(UsbDevice device, boolean granted) {
     if(granted) {
       Intent intent = new Intent(ACTION_USB_PERMISSION_GRANTED);
-      reactContext.sendBroadcast(intent);
+      mReactContext.sendBroadcast(intent);
       UsbDeviceConnection connection = usbManager.openDevice(device);
       new ConnectionThread(device, connection).start();
     } else {
       Intent intent = new Intent(ACTION_USB_PERMISSION_NOT_GRANTED);
-      reactContext.sendBroadcast(intent);
+      mReactContext.sendBroadcast(intent);
     }
   }
 
@@ -699,7 +721,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     serialPort.close();
     Intent intent = new Intent(ACTION_USB_DISCONNECTED);
     intent.putExtra(EXTRA_USB_DEVICE_NAME, deviceName);
-    reactContext.sendBroadcast(intent);
+    mReactContext.sendBroadcast(intent);
   }
 
   ///////////////////////////////////////////////TCP Socket /////////////////////////////////////////////////////////
@@ -735,7 +757,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
                     final String localAddress = options.hasKey("localAddress") ? options.getString("localAddress") : null;
                     final String iface = options.hasKey("interface") ? options.getString("interface") : null;
                     selectNetwork(iface, localAddress);
-                    TcpSocketClient client = new TcpSocketClient(TcpSocketModule.this, cId, null);
+                    TcpSocketClient client = new TcpSocketClient(RNSerialportModule.this, cId, null);
                     socketMap.put(cId, client);
                     client.connect(mReactContext, host, port, options, currentNetwork.getNetwork());
                     onConnect(cId, client);
@@ -810,7 +832,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
             @Override
             public void run() {
                 try {
-                    TcpSocketServer server = new TcpSocketServer(socketMap, TcpSocketModule.this, cId, options);
+                    TcpSocketServer server = new TcpSocketServer(socketMap, RNSerialportModule.this, cId, options);
                     socketMap.put(cId, server);
                     onListen(cId, server);
                 } catch (Exception uhe) {
