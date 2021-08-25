@@ -60,8 +60,9 @@ import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
 public class RNSerialportModule extends ReactContextBaseJavaModule implements LifecycleEventListener, TcpReceiverTask.OnDataReceivedListener {
-    private static final String TAG = "RNSerialport";
+    public static final String TAG = "RNSerialport";
     private static final int N_THREADS = 2;
+    private static boolean isNativeGateway = false;
     private final ReactApplicationContext mReactContext;
     private final ConcurrentHashMap<Integer, TcpSocket> socketMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Network> mNetworkMap = new ConcurrentHashMap<>();
@@ -109,7 +110,9 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
   private List<String> driverList;
 
   private UsbManager usbManager;
-  private Map<String, UsbSerialDevice> serialPorts = new HashMap<>();
+  private Map<String, UsbSerialDevice> serialPorts = new HashMap<>(); // alias deviceName2SerialPort
+  public Map<Integer, String> appBus2DeviceName = new HashMap<>(); // App define which bus id match which deviceName
+  public Map<String, Integer> deviceName2SocketId = new HashMap<>();
 
   //Connection Settings
   private int DATA_BIT     = UsbSerialInterface.DATA_BITS_8;
@@ -466,6 +469,19 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
   }
 
+  public void writeSerialportBytes(String deviceName, byte[] bytes) {
+    if(!usbServiceStarted){
+      eventEmit(onErrorEvent, createError(Definitions.ERROR_USB_SERVICE_NOT_STARTED, Definitions.ERROR_USB_SERVICE_NOT_STARTED_MESSAGE));
+      return;
+    }
+    UsbSerialDevice serialPort = serialPorts.get(deviceName);
+    if(serialPort == null) {
+      eventEmit(onErrorEvent, createError(Definitions.ERROR_THERE_IS_NO_CONNECTION, Definitions.ERROR_THERE_IS_NO_CONNECTION_MESSAGE));
+      return;
+    }
+    serialPort.write(bytes);
+  }
+
   @ReactMethod
   public void writeBytes(String deviceName, ReadableArray message) {
     if(!usbServiceStarted){
@@ -650,6 +666,11 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         UsbSerialInterface.UsbReadCallback usbReadCallback = new UsbSerialInterface.UsbReadCallback() {
           @Override
           public void onReceivedData(byte[] bytes) {
+            if (isNativeGateway) {
+              Gateway.onSerialportData(device.getDeviceName(), bytes, RNSerialportModule.this);
+              return;
+            }
+
             try {
 
               String payloadKey = "payload";
@@ -763,6 +784,20 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
                     onConnect(cId, client);
                 } catch (Exception e) {
                     onError(cId, e.getMessage());
+                }
+            }
+        }));
+    }
+
+    public void writeSocketBytes(@NonNull final Integer cId, @NonNull final byte[] bytes) {
+        executorService.execute(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                TcpSocketClient socketClient = getTcpClient(cId);
+                try {
+                    socketClient.write(bytes);
+                } catch (IOException e) {
+                    onError(cId, e.toString());
                 }
             }
         }));
@@ -962,6 +997,11 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
 
     @Override
     public void onData(Integer id, byte[] data) {
+        if (isNativeGateway) {
+            Gateway.onSocketData(id, data, RNSerialportModule.this);
+            return;
+        }
+
         WritableMap eventParams = Arguments.createMap();
         eventParams.putInt("id", id);
         eventParams.putString("data", Base64.encodeToString(data, Base64.NO_WRAP));
@@ -1013,7 +1053,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         sendEvent("connection", eventParams);
     }
 
-    private TcpSocketClient getTcpClient(final int id) {
+    public TcpSocketClient getTcpClient(final int id) {
         TcpSocket socket = socketMap.get(id);
         if (socket == null) {
             throw new IllegalArgumentException(TAG + "No socket with id " + id);
@@ -1051,4 +1091,17 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
             this.network = network;
         }
     }
+
+  ///////////////////////////////////////////////Gateway /////////////////////////////////////////////////////////
+  ///////////////////////////////////////////////Gateway /////////////////////////////////////////////////////////
+
+  @ReactMethod
+  public void setIsNativeGateway(final boolean isNativeGw) {
+    isNativeGateway = isNativeGw;
+  }
+
+  @ReactMethod
+  public void appBus2DeviceNamePut(Integer appBus, String deviceName) {
+    appBus2DeviceName.put(appBus, deviceName);
+  }
 }
