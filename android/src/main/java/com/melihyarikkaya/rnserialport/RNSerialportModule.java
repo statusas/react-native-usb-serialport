@@ -63,7 +63,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     public static final String TAG = "RNSerialport";
     private static final int N_THREADS = 2;
     private static boolean isNativeGateway = false;
-    private final ReactApplicationContext mReactContext;
+    public final ReactApplicationContext mReactContext;
     private final ConcurrentHashMap<Integer, TcpSocket> socketMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Network> mNetworkMap = new ConcurrentHashMap<>();
     private final CurrentNetwork currentNetwork = new CurrentNetwork();
