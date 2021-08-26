@@ -161,6 +161,9 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
             stopConnection(entry.getKey());
           }
           serialPorts.clear();
+
+          // TODO: not just appBus2DeviceName.clear(), even serialPorts.clear() above, ACTION_USB_DETACHED to be debug
+          // appBus2DeviceName.clear();
           break;
         case ACTION_USB_PERMISSION :
           UsbDevice device = arg1.getExtras().getParcelable(UsbManager.EXTRA_DEVICE);
@@ -425,7 +428,6 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
       return;
     }
     stopConnection(deviceName);
-    serialPorts.remove(deviceName);
   }
 
   @ReactMethod
@@ -446,6 +448,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
       stopConnection(entry.getKey());
     }
     serialPorts.clear();
+    appBus2DeviceName.clear();
   }
 
   @ReactMethod
@@ -740,6 +743,9 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
 
     serialPort.close();
+    serialPorts.remove(deviceName);
+    appBus2DeviceName.values().removeIf(deviceName::equals);
+
     Intent intent = new Intent(ACTION_USB_DISCONNECTED);
     intent.putExtra(EXTRA_USB_DEVICE_NAME, deviceName);
     mReactContext.sendBroadcast(intent);
@@ -836,6 +842,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
                 TcpSocketClient socketClient = getTcpClient(cId);
                 socketClient.destroy();
                 socketMap.remove(cId);
+                deviceName2SocketId.values().removeIf(cId::equals);
             }
         }));
     }
@@ -855,6 +862,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
                 TcpSocketServer socketServer = getTcpServer(cId);
                 socketServer.close();
                 socketMap.remove(cId);
+                deviceName2SocketId.values().removeIf(cId::equals);
             }
         }));
     }
@@ -1011,6 +1019,9 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
 
     @Override
     public void onClose(Integer id, String error) {
+        socketMap.remove(id);
+        deviceName2SocketId.values().removeIf(id::equals);
+
         if (error != null) {
             onError(id, error);
         }
