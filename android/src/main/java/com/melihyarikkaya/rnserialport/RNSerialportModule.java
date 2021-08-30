@@ -669,6 +669,11 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         UsbSerialInterface.UsbReadCallback usbReadCallback = new UsbSerialInterface.UsbReadCallback() {
           @Override
           public void onReceivedData(byte[] bytes) {
+            if (bytes.length == 0) {
+              // onCatalystInstanceDestroy will cause here
+              return;
+            }
+
             if (isNativeGateway) {
               Gateway.onSerialportData(device.getDeviceName(), bytes, RNSerialportModule.this);
               return;
