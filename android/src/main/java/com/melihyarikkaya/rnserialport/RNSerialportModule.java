@@ -63,6 +63,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     public static final String TAG = "RNSerialport";
     private static final int N_THREADS = 2;
     private static boolean isNativeGateway = false;
+    private static boolean isNativeGatewayJsEventEmitOnSerialportData = false;
     public final ReactApplicationContext mReactContext;
     private final ConcurrentHashMap<Integer, TcpSocket> socketMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Network> mNetworkMap = new ConcurrentHashMap<>();
@@ -677,7 +678,9 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
 
             if (isNativeGateway) {
               Gateway.onSerialportData(device.getDeviceName(), bytes, RNSerialportModule.this);
-              return;
+              if (!isNativeGatewayJsEventEmitOnSerialportData) {
+                return;
+              }
             }
 
             try {
@@ -1114,6 +1117,11 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
   @ReactMethod
   public void setIsNativeGateway(final boolean isNativeGw) {
     isNativeGateway = isNativeGw;
+  }
+
+  @ReactMethod
+  public void setIsNativeGatewayJsEventEmitOnSerialportData(final boolean isJsEvent) {
+    isNativeGatewayJsEventEmitOnSerialportData = isJsEvent;
   }
 
   @ReactMethod
