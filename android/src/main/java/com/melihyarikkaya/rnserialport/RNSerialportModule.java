@@ -428,6 +428,7 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
       return;
     }
     stopConnection(deviceName);
+    serialPorts.remove(deviceName);
   }
 
   @ReactMethod
@@ -748,7 +749,6 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
 
     serialPort.close();
-    serialPorts.remove(deviceName);
     appBus2DeviceName.values().removeIf(deviceName::equals);
 
     Intent intent = new Intent(ACTION_USB_DISCONNECTED);
