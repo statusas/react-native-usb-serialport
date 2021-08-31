@@ -150,26 +150,29 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
         case ACTION_USB_NOT_OPENED:
           eventEmit(onErrorEvent, createError(Definitions.ERROR_COULD_NOT_OPEN_SERIALPORT, Definitions.ERROR_COULD_NOT_OPEN_SERIALPORT_MESSAGE));
           break;
-        case ACTION_USB_ATTACHED:
-          eventEmit(onDeviceAttachedEvent, null);
+        case ACTION_USB_ATTACHED: {
+          UsbDevice device = arg1.getExtras().getParcelable(UsbManager.EXTRA_DEVICE);
+          String deviceName = device.getDeviceName();
+          eventEmit(onDeviceAttachedEvent, deviceName);
           if(autoConnect && chooseFirstDevice()) {
             connectDevice(autoConnectDeviceName, autoConnectBaudRate);
           }
+        }
           break;
-        case ACTION_USB_DETACHED:
-          eventEmit(onDeviceDetachedEvent, null);
-          for(Map.Entry<String, UsbSerialDevice> entry: serialPorts.entrySet()) {
-            stopConnection(entry.getKey());
-          }
-          serialPorts.clear();
-
-          // TODO: not just appBus2DeviceName.clear(), even serialPorts.clear() above, ACTION_USB_DETACHED to be debug
-          // appBus2DeviceName.clear();
+        case ACTION_USB_DETACHED: {
+          UsbDevice device = arg1.getExtras().getParcelable(UsbManager.EXTRA_DEVICE);
+          String deviceName = device.getDeviceName();
+          eventEmit(onDeviceDetachedEvent, deviceName);
+          stopConnection(deviceName);
+          serialPorts.remove(deviceName);
+          appBus2DeviceName.values().removeIf(deviceName::equals);
+        }
           break;
-        case ACTION_USB_PERMISSION :
+        case ACTION_USB_PERMISSION: {
           UsbDevice device = arg1.getExtras().getParcelable(UsbManager.EXTRA_DEVICE);
           boolean granted = arg1.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
           startConnection(device, granted);
+        }
           break;
         case ACTION_USB_PERMISSION_GRANTED:
           eventEmit(onUsbPermissionGranted, null);
