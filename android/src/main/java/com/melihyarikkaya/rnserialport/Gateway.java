@@ -14,12 +14,13 @@ public class Gateway {
     String hexString = Definitions.bytesToHex(data);
     Log.d(RNSerialportModule.TAG, "onSocketData " + remoteAddress + ":" + remotePort + ": " + hexString);
 
-    Integer appBus = 0; // this default passthrough Gateway.java assume only one serial port, so 0 here
+    Integer appBus = 0; // this example passthrough assume only one serial port, so 0 here, you can customize appBus from somewhere in the data received
     String deviceName = serialportGateway.appBus2DeviceName.get(appBus);
-    serialportGateway.deviceName2SocketId.put(deviceName, socketId);
-    if (deviceName != null) {
-      serialportGateway.writeSerialportBytes(deviceName, data);
+    if (deviceName == null) {
+      return;
     }
+    serialportGateway.deviceName2SocketId.put(deviceName, socketId);
+    serialportGateway.writeSerialportBytes(deviceName, data);
   }
 
   public static void onSerialportData(String deviceName, byte[] data, RNSerialportModule serialportGateway) {
