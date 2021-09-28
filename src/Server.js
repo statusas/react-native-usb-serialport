@@ -2,7 +2,7 @@
 
 import { NativeModules } from 'react-native';
 import EventEmitter from 'eventemitter3';
-const Sockets = NativeModules.RNSerialport;
+const Sockets = Platform.OS === 'android' ? NativeModules.RNSerialport : {};
 import Socket from './Socket';
 import { nativeEventEmitter, getNextId } from './Globals';
 

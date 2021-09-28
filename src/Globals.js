@@ -1,5 +1,5 @@
 import { NativeEventEmitter, NativeModules } from 'react-native';
-const Sockets = NativeModules.RNSerialport;
+const Sockets = Platform.OS === 'android' ? NativeModules.RNSerialport : {};
 
 let instanceNumber = 0;
 
