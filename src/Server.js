@@ -1,6 +1,6 @@
 'use strict';
 
-import { NativeModules } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import EventEmitter from 'eventemitter3';
 const Sockets = Platform.OS === 'android' ? NativeModules.RNSerialport : {};
 import Socket from './Socket';
