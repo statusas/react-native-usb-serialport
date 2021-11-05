@@ -807,17 +807,12 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
     }
 
     public void writeSocketBytes(@NonNull final Integer cId, @NonNull final byte[] bytes) {
-        executorService.execute(new Thread(new Runnable() {
-            @Override
-            public void run() {
-                TcpSocketClient socketClient = getTcpClient(cId);
-                try {
-                    socketClient.write(bytes);
-                } catch (IOException e) {
-                    onError(cId, e.toString());
-                }
-            }
-        }));
+        TcpSocketClient socketClient = getTcpClient(cId);
+        try {
+            socketClient.write(bytes);
+        } catch (IOException e) {
+            onError(cId, e.toString());
+        }
     }
 
     @SuppressLint("StaticFieldLeak")
