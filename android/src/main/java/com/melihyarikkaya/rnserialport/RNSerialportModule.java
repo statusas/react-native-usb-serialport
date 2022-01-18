@@ -552,15 +552,17 @@ public class RNSerialportModule extends ReactContextBaseJavaModule implements Li
       return;
     }
 
-    if(message.length() < 1) {
+    String msg = message.toUpperCase();
+
+    if(msg.length() < 1) {
       return;
     }
 
-    byte[] data = new byte[message.length() / 2];
+    byte[] data = new byte[msg.length() / 2];
     for (int i = 0; i < data.length; i++) {
       int index = i * 2;
 
-      String hex = message.substring(index, index + 2);
+      String hex = msg.substring(index, index + 2);
 
       if(Definitions.hexChars.indexOf(hex.substring(0, 1)) == -1 || Definitions.hexChars.indexOf(hex.substring(1, 1)) == -1) {
           return;
